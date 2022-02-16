@@ -3,6 +3,13 @@ description: Data Multiplexing for Neural Networks
 show_downloads: true
 # google_analytics: 
 theme: jekyll-theme-cayman
+markdown: kramdown
 
 resources:
   paper:
+
+plugins:
+- jekyll-katex
+
+kramdown:
+  math_engine: katex
