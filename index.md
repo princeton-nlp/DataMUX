@@ -2,8 +2,6 @@
 layout: default
 ---
 
-\[[Code](https://github.com/princeton-nlp/DataMUX)\]
-
 ## Abstract
 In this work, we show that deep neural networks are capable of generating accurate predictions over *mixtures* of inputs. We introduce data multiplexing (DataMUX), a novel technique that enables networks to process multiple inputs simultaneously using a single compact representation, resulting in increased throughput with minimal extra space requirements. Our approach uses two key components -- a *multiplexing* layer that performs a fixed linear transformation to each input before combining them to create a single `mixed' representation which is processed by the base network, and a *demultiplexing* layer that converts the network's output back into independent representations before producing predictions for each input. We demonstrate the viability of DataMUX for multiple architectures (Transformers, and to a lesser extent MLPs and CNNs) across six different tasks spanning sentence classification, named entity recognition and image classification. For instance, DataMUX for Transformers can multiplex up to 20x/40x, achieving 11x/18x throughput with minimal absolute performance drops of <2% and <4%, respectively over a standard Transformer on MNLI, a natural language inference task.We also provide a theoretical construction for multiplexing in self-attention networks and analyze the effect of various design elements in DataMUX.
 
