@@ -1,1 +1,8 @@
+title: DataMUX
+description: Data Multiplexing for Neural Networks
+show_downloads: true
+# google_analytics: 
 theme: jekyll-theme-cayman
+
+resources:
+  paper:
