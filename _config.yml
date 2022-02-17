@@ -8,8 +8,5 @@ markdown: kramdown
 resources:
   paper:
 
-plugins:
-- jekyll-katex
-
 kramdown:
-  math_engine: katex
+  math_engine: mathjax
