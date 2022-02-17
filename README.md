@@ -93,9 +93,9 @@ sh run_glue.sh -N 2 -d index -m gaussian_hadamard -s finetuning -c configs/ablat
 ```
 Note that here we do set -k to 1 as we are continuing training from a checkpoint.
 
-Similar, to run token-level classification tasks like NER, change `run_glue.py` to `run_ner.py`
+Similar, to run token-level classification tasks like NER, change `run_glue.sh` to `run_ner.sh`
 ```
-sh run_glue.sh -N 2 -d index -m gaussian_hadamard -s finetuning -c configs/ablations/base_model/roberta.json -l 5e-5 -t mnli -g "princeton-nlp/datamux-retrieval-2" -k 0
+sh run_ner.sh -N 2 -d index -m gaussian_hadamard -s finetuning -c configs/ablations/base_model/roberta.json -l 5e-5 -t ner -g "princeton-nlp/datamux-retrieval-2" -k 0
 ```
 
 #### Baselines
