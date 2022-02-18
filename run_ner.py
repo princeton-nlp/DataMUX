@@ -587,6 +587,7 @@ def main():
 
     # Training
     if training_args.do_train:
+        logger.info("*** Train ***")
         checkpoint = None
         if last_checkpoint is not None:
             checkpoint = last_checkpoint

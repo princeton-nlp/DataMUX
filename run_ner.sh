@@ -8,8 +8,7 @@ USE_SLURM=0
 NUM_INSTANCES=1
 DEMUXING="index"
 MUXING="gaussian_hadamard"
-SETTING="baseline"
-CONFIG_PATH="configs/ablations/base_model/roberta.json"
+CONFIG_NAME="configs/ablations/base_model/roberta.json"
 LEARNING_RATE=5e-5
 TASK_NAME="mnli"
 LEARN_MUXING=0
@@ -22,19 +21,19 @@ DO_EVAL=0
 show_help() {
     echo 'Usage run_glue.sh [OPTIONS]'
     echo 'options:'
-    echo '-N --num-instances [2,5,10,20,40]'
+    echo '-N --num_instances [2,5,10,20,40]'
     echo '-d --demuxing [index, mlp]'
     echo '-m --muxing [gaussian_hadamard, binary_hadamard, random_ortho]'
     echo '-s --setting [baseline, finetuning, retrieval_pretraining]'
     echo '--task [mnli, qnli, sst2, qqp]'
-    echo '--config-path CONFIG_PATH'
+    echo '--config_name CONFIG_NAME'
     echo '--lr LR'
-    echo '--batch-size BATCH_SIZE'
-    echo '--model-path MODEL_PATH'
-    echo '--learn-muxing'
+    echo '--batch_size BATCH_SIZE'
+    echo '--model_path MODEL_PATH'
+    echo '--learn_muxing'
     echo '--continue'
-    echo '--do-train'
-    echo '--do-eval'
+    echo '--do_train'
+    echo '--do_eval'
 }
 
 die() {
@@ -85,12 +84,12 @@ while :; do
             fi
             ;;
  
-        --config-path)
+        --config_name)
             if [ "$2" ]; then
-                CONFIG_PATH=$2
+                CONFIG_NAME=$2
                 shift
             else
-                die 'ERROR: "--config-path" requires a non-empty option argument.'
+                die 'ERROR: "--config_name" requires a non-empty option argument.'
             fi
             ;;
  
@@ -103,12 +102,12 @@ while :; do
             fi
             ;;
 
-        --batch-size)
+        --batch_size)
             if [ "$2" ]; then
                 BATCH_SIZE=$2
                 shift
             else
-                die 'ERROR: "--batch-size" requires a non-empty option argument.'
+                die 'ERROR: "--batch_size" requires a non-empty option argument.'
             fi
             ;;
 
@@ -121,24 +120,24 @@ while :; do
             fi
             ;;
  
-        --model-path)
+        --model_path)
             if [ "$2" ]; then
                 MODEL_PATH=$2
                 shift
             else
-                die 'ERROR: "--model-path" requires a non-empty option argument.'
+                die 'ERROR: "--model_path" requires a non-empty option argument.'
             fi
             ;;
   
-        --learn-muxing)
+        --learn_muxing)
             LEARN_MUXING=1
             ;;
 
-        --do-train)
+        --do_train)
             DO_TRAIN=1
             ;;
 
-        --do-eval)
+        --do_eval)
             DO_EVAL=1
             ;;
 
@@ -158,6 +157,7 @@ while :; do
 
     shift
 done
+
 
 
 declare -A task2datasetmap
@@ -212,6 +212,7 @@ elif [ "$SETTING" = "finetuning" ]; then
 
 elif [ "$SETTING" = "baseline" ]; then
 
+    echo "Setting is baseline; sets --num-instances to 1."
     RANDOM_ENCODING_NORM=1
     RETRIEVAL_PERCENTAGE=1.0
     RETRIEVAL_PRETRAINING=0
@@ -229,7 +230,7 @@ elif [ "$SETTING" = "baseline" ]; then
     --evaluation_strategy epoch \
     --num_train_epochs 10"
 else
-    echo "setting not recognized, gg"
+    echo "setting (${SETTING}) not recognized or unset. run \"run_glue.sh -h\" for usage."
     exit 0
 fi
 
@@ -290,8 +291,6 @@ if [ "$DO_TRAIN" -eq 1 ]; then
 fi
 if [ "$DO_EVAL" -eq 1 ]; then
         CMD="${CMD} --do-eval"
-else
-    echo $DO_EVAL
 fi
 
 CMD=${CMD}" "${CMD_DIFF}
