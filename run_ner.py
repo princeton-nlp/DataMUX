@@ -429,21 +429,7 @@ def main():
         
         if not model_args.retrieval_pretraining:
 
-            if model_args.continue_train:
-                model = RobertaTokenClassificationMuxed.from_pretrained(model_args.model_name_or_path, config=config)
-            else:
-                # load retrieval pretrained checkpoint
-                retrieval_model = RobertaTokenClassificationMuxed.from_pretrained(model_args.model_name_or_path)
-                retrieval_model_state_dict = retrieval_model.state_dict()
-                # m = torch.load(os.path.join(model_args.model_name_or_path, "pytorch_model.bin"))
-                all_keys = list(retrieval_model_state_dict.keys())
-                for k in all_keys:
-                    if 'demultiplexer' in k:
-                        retrieval_model_state_dict.pop(k)
-                model = RobertaTokenClassificationMuxed(config=config)
-                model.load_state_dict(retrieval_model_state_dict, strict=False)
-                del retrieval_model_state_dict
-                torch.cuda.empty_cache()
+            model = RobertaTokenClassificationMuxed.from_pretrained(model_args.model_name_or_path, config=config)
 
         else:
             if model_args.continue_train:
