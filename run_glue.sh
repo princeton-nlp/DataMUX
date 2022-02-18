@@ -14,22 +14,151 @@ LEARNING_RATE=5e-5
 TASK_NAME="mnli"
 LEARN_MUXING=0
 CONTINUE_TRAIN=0
+DO_TRAIN=0
+DO_EVAL=0
 # commmand line arguments
-while getopts N:d:m:s:c:l:t:g:k: flag
-do
-    case "${flag}" in
-        N) NUM_INSTANCES=${OPTARG};;
-        d) DEMUXING=${OPTARG};;
-        m) MUXING=${OPTARG};;
-        s) SETTING=${OPTARG};;
-        c) CONFIG_PATH=${OPTARG};;
-        l) LEARNING_RATE=${OPTARG};;
-        t) TASK_NAME=${OPTARG};;
-        b) LEARN_MUXING=${OPTARG};;
-        g) MODEL_PATH=${OPTARG};;
-        k) CONTINUE_TRAIN=${OPTARG};;
+#!/bin/bash
+
+show_help() {
+    echo 'Usage run_glue.sh [OPTIONS]'
+    echo 'options:'
+    echo '-N --num-instances [2,5,10,20,40]'
+    echo '-d --demuxing [index, mlp]'
+    echo '-m --muxing [gaussian_hadamard, binary_hadamard, random_ortho]'
+    echo '-s --setting [baseline, finetuning, retrieval_pretraining]'
+    echo '--task [mnli, qnli, sst2, qqp]'
+    echo '--config-path CONFIG_PATH'
+    echo '--lr LR'
+    echo '--batch-size BATCH_SIZE'
+    echo '--model-path MODEL_PATH'
+    echo '--learn-muxing'
+    echo '--continue'
+    echo '--do-train'
+    echo '--do-eval'
+}
+
+die() {
+    printf '%s\n' "$1" >&2
+    exit 1
+}
+
+while :; do
+    case $1 in
+        -h|-\?|--help)
+            show_help    # Display a usage synopsis.
+            exit
+            ;;
+
+        -N|--num-instances)       # Takes an option argument; ensure it has been specified.
+            if [ "$2" ]; then
+                NUM_INSTANCES=$2
+                shift             # shift consumes $2 without treating it as another argument
+            else
+                die 'ERROR: "--num-instances" requires a non-empty option argument.'
+            fi
+            ;;
+ 
+        -d|--demuxing)
+            if [ "$2" ]; then
+                DEMUXING=$2
+                shift
+            else
+                die 'ERROR: "--demuxing" requires a non-empty option argument.'
+            fi
+            ;;
+ 
+        -m|--muxing)
+            if [ "$2" ]; then
+                MUXING=$2
+                shift
+            else
+                die 'ERROR: "--muxing" requires a non-empty option argument.'
+            fi
+            ;;
+ 
+        -s|--setting)
+            if [ "$2" ]; then
+                SETTING=$2
+                shift
+            else
+                die 'ERROR: "--setting" requires a non-empty option argument.'
+            fi
+            ;;
+ 
+        --config-path)
+            if [ "$2" ]; then
+                CONFIG_PATH=$2
+                shift
+            else
+                die 'ERROR: "--config-path" requires a non-empty option argument.'
+            fi
+            ;;
+ 
+        --lr)
+            if [ "$2" ]; then
+                LEARNING_RATE=$2
+                shift
+            else
+                die 'ERROR: "--lr" requires a non-empty option argument.'
+            fi
+            ;;
+
+        --batch-size)
+            if [ "$2" ]; then
+                BATCH_SIZE=$2
+                shift
+            else
+                die 'ERROR: "--batch-size" requires a non-empty option argument.'
+            fi
+            ;;
+
+        --task)
+            if [ "$2" ]; then
+                TASK_NAME=$2
+                shift
+            else
+                die 'ERROR: "--task" requires a non-empty option argument.'
+            fi
+            ;;
+ 
+        --model-path)
+            if [ "$2" ]; then
+                MODEL_PATH=$2
+                shift
+            else
+                die 'ERROR: "--model-path" requires a non-empty option argument.'
+            fi
+            ;;
+  
+        --learn-muxing)
+            LEARN_MUXING=1
+            ;;
+
+        --do-train)
+            DO_TRAIN=1
+            ;;
+
+        --do-eval)
+            DO_EVAL=1
+            ;;
+
+        --continue)
+            CONTINUE_TRAIN=1
+            ;;
+        --)              # End of all options.
+            shift
+            break
+            ;;
+        -?*)
+            die "ERROR: Unknown option : ${1}"
+            ;;
+        *)               # Default case: No more options, so break out of the loop.
+            break
     esac
+
+    shift
 done
+
 # other miscelleneous params
 SAVE_STEPS=10000
 MAX_SEQ_LENGTH=128
@@ -95,7 +224,7 @@ elif [ "$SETTING" = "baseline" ]; then
     --evaluation_strategy epoch \
     --num_train_epochs 10"
 else
-    echo "setting not recognized, gg"
+    echo "setting (${SETTING}) not recognized"
     exit 0
 fi
 
@@ -108,19 +237,23 @@ else
     RUN_NAME=${TASK_NAME}_${MODEL_PATH}_${MUXING}_${DEMUXING}_${NUM_INSTANCES}_${RETRIEVAL_PERCENTAGE}_norm_${RANDOM_ENCODING_NORM}_rc_${RETRIEVAL_LOSS_COEFF}_lr${LEARNING_RATE}_tc_${TASK_LOSS_COEFF}_${CONFIG_PATH}
 fi
 
-if [[ $NUM_INSTANCES -ge 40 ]]
+if [ -z "$BATCH_SIZE" ]  # if BATCH_SIZE is not set manually
 then
-    BATCH_SIZE=16
+    if [[ $NUM_INSTANCES -ge 40 ]]
+    then
+        BATCH_SIZE=16
 
-elif [[ $NUM_INSTANCES -ge 20 ]]
-then
-    BATCH_SIZE=20
-elif [[ $NUM_INSTANCES -ge 2 ]]
-then
-    BATCH_SIZE=24
-else
-    BATCH_SIZE=32
+    elif [[ $NUM_INSTANCES -ge 20 ]]
+    then
+        BATCH_SIZE=20
+    elif [[ $NUM_INSTANCES -ge 2 ]]
+    then
+        BATCH_SIZE=24
+    else
+        BATCH_SIZE=32
+    fi
 fi
+
 
 BATCH_SIZE=$(($BATCH_SIZE * NUM_INSTANCES))
 
@@ -128,8 +261,6 @@ CMD="python run_glue.py \
 --model_name_or_path ${MODEL_PATH} \
 --tokenizer_name roberta-base \
 --config_name ${CONFIG_PATH} \
---do_train \
---do_eval \
 --max_seq_length $MAX_SEQ_LENGTH \
 --per_device_train_batch_size $BATCH_SIZE \
 --per_device_eval_batch_size $BATCH_SIZE \
@@ -150,6 +281,15 @@ CMD="python run_glue.py \
 --gaussian_hadamard_norm ${RANDOM_ENCODING_NORM} \
 --learn_muxing ${LEARN_MUXING} \
 --continue_train ${CONTINUE_TRAIN}"
+
+if [ "$DO_TRAIN" -eq 1 ]; then
+        CMD="${CMD} --do-train"
+fi
+if [ "$DO_EVAL" -eq 1 ]; then
+        CMD="${CMD} --do-eval"
+else
+    echo $DO_EVAL
+fi
 
 CMD=${CMD}" "${CMD_DIFF}
 
