@@ -63,19 +63,19 @@ The bash scripts `run_ner.sh` and `run_glue.sh` take the following arguments:
 
 | Argument      | Flag | Explanation                  |Argument Choices |
 | ------------- |:-----|-----------------------------:|-----------------|
-| NUM_INSTANCES | -N --num-instances | Number of multiplexing instances | 2,5,10,20,40 |
+| NUM_INSTANCES | -N --num_instances | Number of multiplexing instances | 2,5,10,20,40 |
 | DEMUXING      | -d --demuxing      | Demultiplexing architecture| "index", "mlp" 
 | MUXING        | -m --muxing        | Multiplexing architecture | "gaussian_hadamard", "binary_hadamard", "random_ortho"|
 | SETTING       | -s --setting       | Training setting | "baseline", "finetuning", "retrieval_pretraining"|
 | TASK_NAME     | --task             | Task name during finetuning | "mnli", "qnli", "sst2", "qqp" for `run_glue.py` or "ner" for `run_ner.py` 
 | LEARNING_RATE | --lr               | Learning rate for optimization| Any float but we use either 2e-5 or 5e-5|
-| BATCH_SIZE    | --batch-size       | Batch size (after multiplexing) | Any integer. If left unset, will be set automatically based on value of N|
-| CONFIG_PATH   | --config-path      | Config path for backbone Transformer Model| Any config file in `configs` directory
-| MODEL_PATH    | --model-path       | Model path if either continuing to train from a checkpoint or initialize from retrieval task pretrained checkpoint| Path to local checkpoint or path to model on the [hub](https://huggingface.co/princeton-nlp)
-| LEARN_MUXING  | --learn-muxing | Whether to learn instance embeddings in multiplexing| |
+| BATCH_SIZE    | --batch_size       | Batch size (after multiplexing) | Any integer. If left unset, will be set automatically based on value of N|
+| CONFIG_NAME   | --config_name      | Config path for backbone Transformer Model| Any config file in `configs` directory
+| MODEL_PATH    | --model_path       | Model path if either continuing to train from a checkpoint or initialize from retrieval task pretrained checkpoint| Path to local checkpoint or path to model on the [hub](https://huggingface.co/princeton-nlp)
+| LEARN_MUXING  | --learn_muxing | Whether to learn instance embeddings in multiplexing| |
 | CONTINUE_TRAIN| --continue | Pass flag if resuming training (This flag is a little nuanced, please read the sections below for more information)| |
-| DO_TRAIN      | --do-train | Pass flag to do training | |
-| DO_EVAL       | --do-eval  | Pass flag to do eval | |
+| DO_TRAIN      | --do_train | Pass flag to do training | |
+| DO_EVAL       | --do_eval  | Pass flag to do eval | |
 
 Below we list exemplar commands for different training settings:
 
@@ -87,10 +87,10 @@ sh run_glue.sh \
    -d index \
    -m gaussian_hadamard \
    -s retrieval_pretraining \
-   --config-path configs/ablations/base_model/roberta.json \
+   --config_name configs/ablations/base_model/roberta.json \
    --lr 5e-5 \
-   --do-train \
-   --do-eval
+   --do_train \
+   --do_eval
 ```
 
 #### Finetuning
@@ -101,11 +101,11 @@ sh run_glue.sh \
    -d index \
    -m gaussian_hadamard \
    -s finetuning \
-   --config-path configs/ablations/base_model/roberta.json \
+   --config_name configs/ablations/base_model/roberta.json \
    --lr 5e-5 \
    --task mnli \
-   --model-path "princeton-nlp/datamux-retrieval-2" \
-   --do-train \
+   --model_path princeton-nlp/datamux-retrieval-2 \
+   --do_train \
    --do-eval
 ```
 Note that we do **not** pass --continue above, as we are not continuing training. 
@@ -117,12 +117,12 @@ sh run_glue.sh \
    -d index \
    -m gaussian_hadamard \
    -s finetuning \
-   --config-path configs/ablations/base_model/roberta.json \
+   --config_name configs/ablations/base_model/roberta.json \
    --lr 5e-5 \
    --task mnli \
-   --model-path "princeton-nlp/datamux-mnli-2" \
+   --model_path princeton-nlp/datamux-mnli-2 \
    --continue \
-   --do-train \
+   --do_train \
    --do-eval
 ```
 Note that above we do pass --continue as we are continuing training from a checkpoint.
@@ -134,11 +134,11 @@ sh run_ner.sh \
    -d index \
    -m gaussian_hadamard \
    -s finetuning \
-   --config-path configs/ablations/base_model/roberta.json \
+   --config_name configs/ablations/base_model/roberta.json \
    --lr 5e-5 \
    --task ner \
-   --model-path "princeton-nlp/datamux-retrieval-2" \
-   --do-train \
+   --model_path princeton-nlp/datamux-retrieval-2 \
+   --do_train \
    --do-eval 
 ```
 
@@ -148,7 +148,7 @@ For the non-multiplexed baselines, run the following commnands
 sh run_glue.sh \
 -N 1 \
 -s baseline \
---config-path configs/ablations/base_model/roberta.json \
+--config_name configs/ablations/base_model/roberta.json \
 --lr 2e-5 \
 --task mnli
 ```
