@@ -36,8 +36,20 @@ Illustration of DataMUX applied to a Transformer model. Given a tuple of $$N$$ s
     </figure>
 </div>
 
-### Citation
+## Task Performance Results
+<div style="text-align: center;">
+<img src="assets/photos/main_results_figure.png">
+</div>
+Results for data multiplexing using $$\phi^i$$ as an orthogonal matrix or hadamard product. We compare 12-layer DataMUX models to a vanilla 12-layer Transformer (B1) and a Transformer pre-trained using our proposed retrieval task (B2). We demonstrate multiplexing up to $$40$$ instances without substantial degradation in task performance.
 
+## Throughput Performance Results
+<div style="text-align: center;">
+<img src="assets/photos/speed_plots.png">
+</div>
+We evaluate the efficiency of DataMUX for models of different sizes on $$20,000$$ MNLI instances ($$N=1$$ being a vanilla Transformer). The y-axis shows performance normalized by the 12-layer vanilla Transformer model. We demonstrate an $$18$$x throughput increase for $$N=40$$ on the 12-layer model and a nearly $$25$$x throughput increase for smaller models with $$N=20$$.
+
+
+### Citation
 ```
 @article{datamux
   title={DataMUX: Data Multiplexing for Neural Networks,
