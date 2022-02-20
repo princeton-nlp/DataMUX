@@ -2,7 +2,7 @@
 
 PyTorch implementation for the paper:
 
-**[DataMUX: Data Multiplexing for Neural Networks](https://arxiv.org/abs/1912.02379)**  
+**[DataMUX: Data Multiplexing for Neural Networks](https://princeton-nlp.github.io/DataMUX/)**  
 [Vishvak Murahari](https://vishvakmurahari.com/), [Carlos E. Jimenez](https://www.carlosejimenez.com/), [Runzhe Yang](https://runzhe-yang.science/), [Karthik Narasimhan](https://www.cs.princeton.edu/~karthikn/)
 
 ![models](images/multiplexing.gif)
