@@ -1224,7 +1224,6 @@ class MuxTrainer(Trainer):
         self.control = self.callback_handler.on_evaluate(
             self.args, self.state, self.control, output.metrics
         )
-
         if speed_metrics:
             train_dataloader =  self.get_train_dataloader()
             model = self._wrap_model(self.model, training=False)
@@ -1305,9 +1304,9 @@ class MuxTrainer(Trainer):
             ignore_keys=ignore_keys,
             metric_key_prefix=metric_key_prefix,
         )
-        output.metrics.update(
-            speed_metrics(metric_key_prefix, start_time, len(test_dataset))
-        )
+        # output.metrics.update(
+        #     speed_metrics(metric_key_prefix, start_time, len(test_dataset))
+        # )
 
         self._memory_tracker.stop_and_update_metrics(output.metrics)
 
