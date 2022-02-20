@@ -141,9 +141,6 @@ while :; do
             DO_EVAL=1
             ;;
 
-        --continue)
-            CONTINUE_TRAIN=1
-            ;;
         --)              # End of all options.
             shift
             break
@@ -177,7 +174,6 @@ if [ "$SETTING" == "retrieval_pretraining" ]; then
     SHOULD_MUX=1
     DATALOADER_DROP_LAST=1
     OUTPUT_DIR_BASE="checkpoints/retrieval_pretraining"
-    MODEL_PATH="retrieval_pretraining"
 
     # params diff
     DATASET_NAME="wikitext"
@@ -222,7 +218,6 @@ elif [ "$SETTING" = "baseline" ]; then
     DATALOADER_DROP_LAST=0
     OUTPUT_DIR_BASE="checkpoints/baselines"
     NUM_INSTANCES=1
-    MODEL_PATH="baseline"
     # add task name 
     # save steps + save strategy + num epochs
     CMD_DIFF="--task_name ${TASK_NAME}\
@@ -262,9 +257,8 @@ fi
 BATCH_SIZE=$(($BATCH_SIZE * NUM_INSTANCES))
 
 CMD="python run_ner.py \
---model_name_or_path ${MODEL_PATH} \
 --tokenizer_name roberta-base \
---config_name ${CONFIG_PATH} \
+--config_name ${CONFIG_NAME} \
 --max_seq_length $MAX_SEQ_LENGTH \
 --per_device_train_batch_size $BATCH_SIZE \
 --per_device_eval_batch_size $BATCH_SIZE \
@@ -283,14 +277,18 @@ CMD="python run_ner.py \
 --demuxing_variant ${DEMUXING} \
 --should_mux ${SHOULD_MUX} \
 --gaussian_hadamard_norm ${RANDOM_ENCODING_NORM} \
---learn_muxing ${LEARN_MUXING} \
---continue_train ${CONTINUE_TRAIN}"
+--learn_muxing ${LEARN_MUXING}"
 
 if [ "$DO_TRAIN" -eq 1 ]; then
-        CMD="${CMD} --do-train"
+        CMD="${CMD} --do_train"
 fi
 if [ "$DO_EVAL" -eq 1 ]; then
-        CMD="${CMD} --do-eval"
+        CMD="${CMD} --do_eval"
+fi
+
+if [ ! -z "$MODEL_PATH" ]  # if MODEL PATH is set manually
+then
+    CMD="${CMD} --model_name_or_path ${MODEL_PATH}"
 fi
 
 CMD=${CMD}" "${CMD_DIFF}

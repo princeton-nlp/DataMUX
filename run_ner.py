@@ -164,6 +164,7 @@ class ModelArguments:
     """
 
     model_name_or_path: str = field(
+        default=None,
         metadata={
             "help": "Path to pretrained model or model identifier from huggingface.co/models"
         }
@@ -250,10 +251,7 @@ class ModelArguments:
         default=0,
         metadata={"help": "whether instance embeddings are learnt or not"},
     )
-    continue_train: Optional[int] = field(
-        default=0,
-        metadata={"help": "continue training from pretrained checkpoint"},
-    )
+
 
 def main():
     # See all possible arguments in src/transformers/training_args.py
@@ -424,24 +422,20 @@ def main():
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
-    # add continue flag
+
+    model_path_supplied = model_args.model_name_or_path is not None
     if model_args.should_mux:
         
-        if not model_args.retrieval_pretraining:
-
+        if model_path_supplied:
             model = RobertaTokenClassificationMuxed.from_pretrained(model_args.model_name_or_path, config=config)
-
         else:
-            if model_args.continue_train:
-                model = RobertaTokenClassificationMuxed.from_pretrained(model_args.model_name_or_path, config=config)
-            else:
-                model = RobertaTokenClassificationMuxed(config=config)
+            model = RobertaTokenClassificationMuxed(config=config)
     else:
         # non-multiplexed baseline
-        model = AutoModelForTokenClassification.from_config(
-            config=config,
-        )
-
+        if model_path_supplied:
+            model = AutoModelForTokenClassification.from_pretrained(model_args.model_name_or_path, config=config)
+        else:
+            model = AutoModelForTokenClassification(config=config)
 
     # Tokenizer check: this script requires a fast tokenizer.
     if not isinstance(tokenizer, PreTrainedTokenizerFast):

@@ -46,8 +46,8 @@ while :; do
         -h|-\?|--help)
             show_help    # Display a usage synopsis.
             exit
-            ;;
-
+        ;;
+        
         -N|--num_instances)       # Takes an option argument; ensure it has been specified.
             if [ "$2" ]; then
                 NUM_INSTANCES=$2
@@ -55,8 +55,8 @@ while :; do
             else
                 die 'ERROR: "--num-instances" requires a non-empty option argument.'
             fi
-            ;;
- 
+        ;;
+        
         -d|--demuxing)
             if [ "$2" ]; then
                 DEMUXING=$2
@@ -64,8 +64,8 @@ while :; do
             else
                 die 'ERROR: "--demuxing" requires a non-empty option argument.'
             fi
-            ;;
- 
+        ;;
+        
         -m|--muxing)
             if [ "$2" ]; then
                 MUXING=$2
@@ -73,8 +73,8 @@ while :; do
             else
                 die 'ERROR: "--muxing" requires a non-empty option argument.'
             fi
-            ;;
- 
+        ;;
+        
         -s|--setting)
             if [ "$2" ]; then
                 SETTING=$2
@@ -82,8 +82,8 @@ while :; do
             else
                 die 'ERROR: "--setting" requires a non-empty option argument.'
             fi
-            ;;
- 
+        ;;
+        
         --config_name)
             if [ "$2" ]; then
                 CONFIG_NAME=$2
@@ -91,8 +91,8 @@ while :; do
             else
                 die 'ERROR: "--config_name" requires a non-empty option argument.'
             fi
-            ;;
- 
+        ;;
+        
         --lr)
             if [ "$2" ]; then
                 LEARNING_RATE=$2
@@ -100,8 +100,8 @@ while :; do
             else
                 die 'ERROR: "--lr" requires a non-empty option argument.'
             fi
-            ;;
-
+        ;;
+        
         --batch_size)
             if [ "$2" ]; then
                 BATCH_SIZE=$2
@@ -109,8 +109,8 @@ while :; do
             else
                 die 'ERROR: "--batch_size" requires a non-empty option argument.'
             fi
-            ;;
-
+        ;;
+        
         --task)
             if [ "$2" ]; then
                 TASK_NAME=$2
@@ -118,8 +118,8 @@ while :; do
             else
                 die 'ERROR: "--task" requires a non-empty option argument.'
             fi
-            ;;
- 
+        ;;
+        
         --model_path)
             if [ "$2" ]; then
                 MODEL_PATH=$2
@@ -127,34 +127,31 @@ while :; do
             else
                 die 'ERROR: "--model_path" requires a non-empty option argument.'
             fi
-            ;;
-  
+        ;;
+        
         --learn_muxing)
             LEARN_MUXING=1
-            ;;
-
+        ;;
+        
         --do_train)
             DO_TRAIN=1
-            ;;
-
+        ;;
+        
         --do_eval)
             DO_EVAL=1
-            ;;
-
-        --continue)
-            CONTINUE_TRAIN=1
-            ;;
+        ;;
+        
         --)              # End of all options.
             shift
             break
-            ;;
+        ;;
         -?*)
             die "ERROR: Unknown option : ${1}"
-            ;;
+        ;;
         *)               # Default case: No more options, so break out of the loop.
             break
     esac
-
+    
     shift
 done
 
@@ -163,7 +160,7 @@ SAVE_STEPS=10000
 MAX_SEQ_LENGTH=128
 
 if [ "$SETTING" == "retrieval_pretraining" ]; then
-
+    
     RANDOM_ENCODING_NORM=20
     RETRIEVAL_PERCENTAGE=1.0
     RETRIEVAL_PRETRAINING=1
@@ -172,8 +169,7 @@ if [ "$SETTING" == "retrieval_pretraining" ]; then
     SHOULD_MUX=1
     DATALOADER_DROP_LAST=1
     OUTPUT_DIR_BASE="checkpoints/retrieval_pretraining"
-    MODEL_PATH="retrieval_pretraining"
-
+    
     # params diff
     DATASET_NAME="wikitext"
     DATASET_CONFIG_NAME="wikitext-103-raw-v1"
@@ -183,9 +179,9 @@ if [ "$SETTING" == "retrieval_pretraining" ]; then
     --eval_steps 10000 \
     --max_steps 500000 \
     --save_steps 10000"
-
-elif [ "$SETTING" = "finetuning" ]; then
-
+    
+    elif [ "$SETTING" = "finetuning" ]; then
+    
     RANDOM_ENCODING_NORM=1
     RETRIEVAL_PERCENTAGE=1.0
     RETRIEVAL_PRETRAINING=0
@@ -194,11 +190,11 @@ elif [ "$SETTING" = "finetuning" ]; then
     SHOULD_MUX=1
     DATALOADER_DROP_LAST=1
     OUTPUT_DIR_BASE="checkpoints/finetune"
-
+    
     # params diff
     # add task name
     # save steps + save strategy + num epochs
-
+    
     CMD_DIFF="--task_name ${TASK_NAME}\
     --evaluation_strategy steps \
     --eval_steps 10000 \
@@ -217,8 +213,7 @@ elif [ "$SETTING" = "baseline" ]; then
     DATALOADER_DROP_LAST=0
     OUTPUT_DIR_BASE="checkpoints/baselines"
     NUM_INSTANCES=1
-    MODEL_PATH="baseline"
-    # add task name 
+    # add task name
     # save steps + save strategy + num epochs
     CMD_DIFF="--task_name ${TASK_NAME}\
     --evaluation_strategy epoch \
@@ -242,7 +237,7 @@ then
     if [[ $NUM_INSTANCES -ge 40 ]]
     then
         BATCH_SIZE=16
-
+        
     elif [[ $NUM_INSTANCES -ge 20 ]]
     then
         BATCH_SIZE=20
@@ -258,7 +253,6 @@ fi
 BATCH_SIZE=$(($BATCH_SIZE * NUM_INSTANCES))
 
 CMD="python run_glue.py \
---model_name_or_path ${MODEL_PATH} \
 --tokenizer_name roberta-base \
 --config_name ${CONFIG_NAME} \
 --max_seq_length $MAX_SEQ_LENGTH \
@@ -279,14 +273,18 @@ CMD="python run_glue.py \
 --demuxing_variant ${DEMUXING} \
 --should_mux ${SHOULD_MUX} \
 --gaussian_hadamard_norm ${RANDOM_ENCODING_NORM} \
---learn_muxing ${LEARN_MUXING} \
---continue_train ${CONTINUE_TRAIN}"
+--learn_muxing ${LEARN_MUXING}"
 
 if [ "$DO_TRAIN" -eq 1 ]; then
-        CMD="${CMD} --do_train"
+    CMD="${CMD} --do_train"
 fi
 if [ "$DO_EVAL" -eq 1 ]; then
-        CMD="${CMD} --do_eval"
+    CMD="${CMD} --do_eval"
+fi
+
+if [ ! -z "$MODEL_PATH" ]  # if MODEL PATH is set manually
+then
+    CMD="${CMD} --model_name_or_path ${MODEL_PATH}"
 fi
 
 CMD=${CMD}" "${CMD_DIFF}
@@ -306,7 +304,7 @@ echo $CMD
 
 if [[ $USE_SLURM = 1 ]]; then
     sbatch --time=$TIME --mem=32G --output=logs/%x-%j.out --job-name=${TASK_NAME}_${NUM_INSTANCES}_${MUXING}_${DEMUXING} --gres=gpu:1 ./run_job.sh \
-    "$CMD"                
+    "$CMD"
 else
     ./run_job.sh "$CMD"
 fi

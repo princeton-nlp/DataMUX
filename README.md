@@ -73,7 +73,6 @@ The bash scripts `run_ner.sh` and `run_glue.sh` take the following arguments:
 | CONFIG_NAME   | --config_name      | Config path for backbone Transformer Model| Any config file in `configs` directory
 | MODEL_PATH    | --model_path       | Model path if either continuing to train from a checkpoint or initialize from retrieval task pretrained checkpoint| Path to local checkpoint or path to model on the [hub](https://huggingface.co/princeton-nlp)
 | LEARN_MUXING  | --learn_muxing | Whether to learn instance embeddings in multiplexing| |
-| CONTINUE_TRAIN| --continue | Pass flag if resuming training (This flag is a little nuanced, please read the sections below for more information)| |
 | DO_TRAIN      | --do_train | Pass flag to do training | |
 | DO_EVAL       | --do_eval  | Pass flag to do eval | |
 
@@ -108,24 +107,6 @@ sh run_glue.sh \
    --do_train \
    --do_eval
 ```
-Note that we do **not** pass --continue above, as we are not continuing training. 
-
-If you wanted to continue finetuning a checkpoint for more iterations, you could run
-```
-sh run_glue.sh \
-   -N 2 \
-   -d index \
-   -m gaussian_hadamard \
-   -s finetuning \
-   --config_name configs/ablations/base_model/roberta.json \
-   --lr 5e-5 \
-   --task mnli \
-   --model_path princeton-nlp/datamux-mnli-2 \
-   --continue \
-   --do_train \
-   --do_eval
-```
-Note that above we do pass --continue as we are continuing training from a checkpoint.
 
 Similar, to run token-level classification tasks like NER, change `run_glue.sh` to `run_ner.sh`
 ```

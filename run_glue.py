@@ -170,6 +170,7 @@ class ModelArguments:
     """
 
     model_name_or_path: str = field(
+        default=None,
         metadata={
             "help": "Path to pretrained model or model identifier from huggingface.co/models"
         }
@@ -256,10 +257,7 @@ class ModelArguments:
         default=0,
         metadata={"help": "whether instance embeddings are learnt or not"},
     )
-    continue_train: Optional[int] = field(
-        default=0,
-        metadata={"help": "continue training from pretrained checkpoint"},
-    )
+
 
 def main():
     # See all possible arguments in src/transformers/training_args.py
@@ -443,23 +441,19 @@ def main():
     config.task_loss_coeff = model_args.task_loss_coeff
     config.learn_muxing = model_args.learn_muxing
 
-    # add continue flag
+    model_path_supplied = model_args.model_name_or_path is not None
     if model_args.should_mux:
         
-        if not model_args.retrieval_pretraining:
-
+        if model_path_supplied:
             model = RobertaSequenceClassificationMuxed.from_pretrained(model_args.model_name_or_path, config=config)
-
         else:
-            if model_args.continue_train:
-                model = RobertaSequenceClassificationMuxed.from_pretrained(model_args.model_name_or_path, config=config)
-            else:
-                model = RobertaSequenceClassificationMuxed(config=config)
+            model = RobertaSequenceClassificationMuxed(config=config)
     else:
         # non-multiplexed baseline
-        model = AutoModelForSequenceClassification.from_config(
-            config=config,
-        )
+        if model_path_supplied:
+            model = AutoModelForSequenceClassification.from_pretrained(model_args.model_name_or_path, config=config)
+        else:
+            model = AutoModelForSequenceClassification(config=config)
 
     if data_args.task_name is not None:
         sentence1_key, sentence2_key = task_to_keys[data_args.task_name]
