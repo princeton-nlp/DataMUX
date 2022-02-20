@@ -69,7 +69,7 @@ The bash scripts `run_ner.sh` and `run_glue.sh` take the following arguments:
 | SETTING       | -s --setting       | Training setting | "baseline", "finetuning", "retrieval_pretraining"|
 | TASK_NAME     | --task             | Task name during finetuning | "mnli", "qnli", "sst2", "qqp" for `run_glue.py` or "ner" for `run_ner.py` 
 | LEARNING_RATE | --lr               | Learning rate for optimization| Any float but we use either 2e-5 or 5e-5|
-| BATCH_SIZE    | --batch_size       | Batch size (after multiplexing) | Any integer. If left unset, will be set automatically based on value of N|
+| BATCH_SIZE    | --batch_size       | Batch size (after multiplexing); note that the *effective* batch size is BATCH_SIZE * NUM_INSTANCES | Any integer. If left unset, will be set automatically based on value of N|
 | CONFIG_NAME   | --config_name      | Config path for backbone Transformer Model| Any config file in `configs` directory
 | MODEL_PATH    | --model_path       | Model path if either continuing to train from a checkpoint or initialize from retrieval task pretrained checkpoint| Path to local checkpoint or path to model on the [hub](https://huggingface.co/princeton-nlp)
 | LEARN_MUXING  | --learn_muxing | Whether to learn instance embeddings in multiplexing| |
