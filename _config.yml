@@ -6,7 +6,7 @@ theme: jekyll-theme-cayman
 markdown: kramdown
 
 resources:
-  paper:
+  paper: https://arxiv.org/abs/2202.09318
 
 kramdown:
   math_engine: mathjax
