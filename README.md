@@ -10,11 +10,13 @@ PyTorch implementation for the paper:
 This repository contains code for reproducing results. We provide pretrained model weights and associated configs to run inference or train these models from scratch. If you find this work useful in your research, please cite:
 
 ```
-@article{datamux
-  title={DataMUX: Data Multiplexing for Neural Networks,
-  author={Vishvak Murahari and Carlos E. Jimenez and Runzhe Yang and Karthik Narasimhan},
-  journal={arXiv preprint arXiv:2202.09318},
-  year={2022},
+@misc{murahari2022datamux,
+      title={DataMUX: Data Multiplexing for Neural Networks}, 
+      author={Vishvak Murahari and Carlos E. Jimenez and Runzhe Yang and Karthik Narasimhan},
+      year={2022},
+      eprint={2202.09318},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
 }
 ```
 
@@ -139,11 +141,13 @@ For reproducing results on the vision tasks for MLPs and CNNs, please use this [
 
 ### Reference
 ```
-@article{datamux
-  title={DataMUX: Data Multiplexing for Neural Networks,
-  author={Vishvak Murahari and Carlos E. Jimenez and Runzhe Yang and Karthik Narasimhan},
-  journal={arXiv preprint arXiv:2202.09318},
-  year={2022},
+@misc{murahari2022datamux,
+      title={DataMUX: Data Multiplexing for Neural Networks}, 
+      author={Vishvak Murahari and Carlos E. Jimenez and Runzhe Yang and Karthik Narasimhan},
+      year={2022},
+      eprint={2202.09318},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
 }
 ```
 ### License
