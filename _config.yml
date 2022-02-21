@@ -5,6 +5,9 @@ show_downloads: true
 theme: jekyll-theme-cayman
 markdown: kramdown
 
+twitter_username: princeton_nlp
+title_image: assets/photos/mux_teaser.png
+
 resources:
   paper: https://arxiv.org/abs/2202.09318
 
