@@ -151,3 +151,4 @@ For reproducing results on the vision tasks for MLPs and CNNs, please use this [
 }
 ```
 ### License
+Check `LICENSE.md`
