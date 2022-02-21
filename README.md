@@ -13,7 +13,7 @@ This repository contains code for reproducing results. We provide pretrained mod
 @article{datamux
   title={DataMUX: Data Multiplexing for Neural Networks,
   author={Vishvak Murahari and Carlos E. Jimenez and Runzhe Yang and Karthik Narasimhan},
-  journal={arXiv preprint arXiv:TODO},
+  journal={arXiv preprint arXiv:2202.09318},
   year={2022},
 }
 ```
@@ -142,7 +142,7 @@ For reproducing results on the vision tasks for MLPs and CNNs, please use this [
 @article{datamux
   title={DataMUX: Data Multiplexing for Neural Networks,
   author={Vishvak Murahari and Carlos E. Jimenez and Runzhe Yang and Karthik Narasimhan},
-  journal={arXiv preprint arXiv:TODO},
+  journal={arXiv preprint arXiv:2202.09318},
   year={2022},
 }
 ```
