@@ -59,6 +59,8 @@ We release all the pretrained checkpoints on the Hugging Face [model hub](https:
 | QNLI            | datamux-qnli-<num_instances>      | princeton-nlp/datamux-qnli-<num_instances>|
 | QQP             | datamux-qqp-<num_instances>       | princeton-nlp/datamux-qqp-<num_instances>|
 | SST2            | datamux-sst2-<num_instances>      | princeton-nlp/datamux-sst2-<num_instances>|
+| NER             | datamux-ner-<num_instances>      | princeton-nlp/datamux-ner-<num_instances>|
+
 #### Settings
 The bash scripts `run_ner.sh` and `run_glue.sh` take the following arguments:
 
