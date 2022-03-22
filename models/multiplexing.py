@@ -48,7 +48,7 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
             self.demultiplexer = RobertaMLPDemultiplexerSequenceClassification(config)
             self.retrieval_head = RetrievalHeadMLPDemultiplexing(config)
         else:
-            raise NotImplementedError()
+            raise NotImplementedError("demuxing_varaint argument (%s) not recognized." % config.demuxing_variant)
 
         self.init_weights()
 
@@ -70,7 +70,7 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
                 self.num_instances, d_model, epsilon=config.binary_hadamard_epsilon
             )
         else:
-            raise NotImplementedError()
+            raise NotImplementedError("muxing_variant argument (%s) not recognized." % config.muxing_variant)
 
         if instance_embedding is not None:
             self.instance_embedding = torch.nn.Parameter(instance_embedding)
@@ -155,7 +155,7 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
             special_tokens_end_position = 1
         
         else:
-            raise NotImplementedError()
+            raise NotImplementedError("demuxing_variant (%s) not recognized." % self.demuxing_variant)
 
         # concatenate
         embedding_output = self.roberta.embeddings(
@@ -312,7 +312,7 @@ class RobertaTokenClassificationMuxed(RobertaPreTrainedModel):
             self.demultiplexer = RobertaMLPDemultiplexerTokenClassification(config)
             self.retrieval_head = RetrievalHeadMLPDemultiplexing(config)
         else:
-            raise NotImplementedError()
+            raise NotImplementedError("demuxing_variant (%s) not recognized." % config.demuxing_variant)
 
         self.init_weights()
 
@@ -334,7 +334,7 @@ class RobertaTokenClassificationMuxed(RobertaPreTrainedModel):
                 self.num_instances, d_model, epsilon=config.binary_hadamard_epsilon
             )
         else:
-            raise NotImplementedError()
+            raise NotImplementedError("muxing_variant (%s) not recognized." % config.muxing_variant)
 
         if instance_embedding is not None:
             self.instance_embedding = torch.nn.Parameter(instance_embedding)
@@ -419,7 +419,7 @@ class RobertaTokenClassificationMuxed(RobertaPreTrainedModel):
             special_tokens_end_position = 0
         
         else:
-            raise NotImplementedError()
+            raise NotImplementedError("demuxing_variant (%s) not recognized." % self.demuxing_variant)
 
         # concatenate
         embedding_output = self.roberta.embeddings(
