@@ -249,7 +249,7 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
         # wipe of 1 - (0.1  *  retrieval percentage) of pad tokens
         pad_mask_wipe = pad_mask
         non_pad_mask_wipe = ~pad_mask & torch.bernoulli(
-            torch.full(retrieval_labels.shape, 1 - self.config.retrieval_percentage)
+            torch.full(retrieval_labels.shape, 1 - self.config.retrieval_percentage).float()
         ).bool().to(input_ids.device)
         retrieval_labels[non_pad_mask_wipe] = -100
 
@@ -513,7 +513,7 @@ class RobertaTokenClassificationMuxed(RobertaPreTrainedModel):
         # wipe of 1 - (0.1  *  retrieval percentage) of pad tokens
         pad_mask_wipe = pad_mask
         non_pad_mask_wipe = ~pad_mask & torch.bernoulli(
-            torch.full(retrieval_labels.shape, 1 - self.config.retrieval_percentage)
+            torch.full(retrieval_labels.shape, 1 - self.config.retrieval_percentage).float()
         ).bool().to(input_ids.device)
         retrieval_labels[non_pad_mask_wipe] = -100
 
