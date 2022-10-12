@@ -50,13 +50,13 @@ We evaluate the efficiency of DataMUX for models of different sizes on $$20,000$
 
 ### Citation
 ```
-@misc{murahari2022datamux,
-      title={DataMUX: Data Multiplexing for Neural Networks}, 
-      author={Vishvak Murahari and Carlos E. Jimenez and Runzhe Yang and Karthik Narasimhan},
-      year={2022},
-      eprint={2202.09318},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
+@inproceedings{
+murahari2022datamux,
+title={Data{MUX}: Data Multiplexing for Neural Networks},
+author={Vishvak Murahari and Carlos E Jimenez and Runzhe Yang and Karthik R Narasimhan},
+booktitle={Thirty-Sixth Conference on Neural Information Processing Systems},
+year={2022},
+url={https://openreview.net/forum?id=UdgtTVTdswg}
 }
 ```
 
