@@ -15,12 +15,12 @@ from transformers.models.roberta.modeling_roberta import (
 from typing import Optional, Tuple
 from transformers.activations import gelu
 import math
-
+import numpy as np
 from .utils import (
     random_encoding,
     binary_encoding,
 )
-from scipy.stats import ortho_group
+from scipy.stats import ortho_group, special_ortho_group
 
 logger = logging.get_logger(__name__)
 
@@ -65,6 +65,21 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
                 for _ in range(self.num_instances)
             ]
             instance_embedding = torch.stack(instance_embedding, dim=0)
+        elif self.muxing_variant == "random_ortho_low_rank":
+            # create low rank matrix
+            instance_embedding = []
+            H_ = special_ortho_group.rvs(dim=config.hidden_size)
+            U_ = special_ortho_group.rvs(dim=config.hidden_size)
+            for i in range(self.num_instances):
+                G_ = np.zeros((config.hidden_size, config.hidden_size))
+                l = i * (config.hidden_size//self.num_instances)
+                r = l + (config.hidden_size//self.num_instances)
+                H_copy = H_.copy()
+                G_[:, l : r] = H_copy[:, l : r]
+                G_ = U_ @ G_.T 
+                instance_embedding.append(torch.from_numpy(G_).float())
+            instance_embedding = torch.stack(instance_embedding, dim=0)
+            instance_embedding = nn.Parameter(instance_embedding)
         elif self.muxing_variant == "binary_hadamard":
             instance_embedding = binary_encoding(
                 self.num_instances, d_model, epsilon=config.binary_hadamard_epsilon
@@ -94,7 +109,6 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
         labels=None,
         return_dict=None,
     ):
-
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
         )
@@ -121,12 +135,12 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
 
             # prefix 5 x 5
 
-            prefix = torch.full((num_instances, num_instances), 50000).to(input_ids.device)
+            prefix = torch.full((num_instances, num_instances), 50000, device=input_ids.device)
             prefix[
-                torch.arange(num_instances).to(input_ids.device),
-                torch.arange(num_instances).to(input_ids.device),
+                torch.arange(num_instances, device=input_ids.device),
+                torch.arange(num_instances, device=input_ids.device)
             ] = (
-                -(torch.arange(num_instances).to(input_ids.device) + 2)
+                -(torch.arange(num_instances, device=input_ids.device) + 2)
                 + self.roberta.embeddings.word_embeddings.weight.shape[0]
             )
 
@@ -136,7 +150,7 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
             # [<s>, <s>, <s>, -5, <s>]
             # [<s>, <s>, <s>, <s>, -6]
             # +  size of vocab
-            cls_tokens = torch.full((num_instances, 1), 49923).to(input_ids.device)
+            cls_tokens = torch.full((num_instances, 1), 49923, device=input_ids.device)
             prefix = torch.cat([prefix, cls_tokens], dim=1)
 
             prefix = prefix.repeat(modified_batch_size, 1)
@@ -146,7 +160,7 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
             special_tokens_end_position = num_instances + 1
 
         elif self.demuxing_variant == "mlp":
-            cls_tokens = torch.full((num_instances, 1), 49923).to(input_ids.device)
+            cls_tokens = torch.full((num_instances, 1), 49923, device=input_ids.device)
             cls_tokens = cls_tokens.repeat(modified_batch_size, 1)
             # prefix = prefix.repeat(modified_batch_size, 1)
             input_ids = input_ids[: (modified_batch_size * num_instances)]
@@ -166,7 +180,7 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
             past_key_values_length=past_key_values_length,
         )
         _, _, embedding_dim = embedding_output.shape
-        if self.muxing_variant == "random_ortho":
+        if self.muxing_variant == "random_ortho" or self.muxing_variant == "random_ortho_low_rank":
             embedding_output = embedding_output.view(
                 modified_batch_size,
                 num_instances,
@@ -195,7 +209,6 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
             instance_embed = instance_embed.unsqueeze(1).expand(
                 num_instances, modified_seq_length, embedding_dim
             )
-            instance_embed = instance_embed.to(embedding_output.device)
             embedding_output = embedding_output * instance_embed.unsqueeze(0)
 
             embedding_output = torch.mean(embedding_output, dim=1)
@@ -216,46 +229,45 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
         labels = labels[: (modified_batch_size * num_instances)]
         assert len(labels.shape) == 1  # assert one dimension
 
-        logits = self.demultiplexer(sequence_output)
+        logits, demuxed_representations = self.demultiplexer(sequence_output)
 
-        instance_labels = torch.full(
-            (modified_batch_size, modified_seq_length),
-            0,
-            device=input_ids.device,
-        ).long()
-        # skip the cls and prefix tokens
-        instance_labels[:, special_tokens_end_position :] = torch.randint(
-            num_instances, (modified_batch_size, modified_seq_length - special_tokens_end_position)
-        ).to(input_ids.device)
+        # instance_labels = torch.full(
+        #     (modified_batch_size, modified_seq_length),
+        #     0,
+        #     device=input_ids.device,
+        # ).long()
+        # # skip the cls and prefix tokens
+        # instance_labels[:, special_tokens_end_position :] = torch.randint(
+        #     num_instances, (modified_batch_size, modified_seq_length - special_tokens_end_position), device=input_ids.device)
 
-        # index into input ids to get the corresponding labels
-        input_ids = input_ids.view(modified_batch_size, num_instances, -1)
-        input_ids = input_ids.permute(0, 2, 1)
+        # # index into input ids to get the corresponding labels
+        # input_ids = input_ids.view(modified_batch_size, num_instances, -1)
+        # input_ids = input_ids.permute(0, 2, 1)
 
-        retrieval_labels = input_ids[
-            torch.arange(modified_batch_size)
-            .to(input_ids.device)
-            .unsqueeze(1)
-            .expand(modified_batch_size, modified_seq_length),
-            torch.arange(modified_seq_length)
-            .to(input_ids.device)
-            .unsqueeze(0)
-            .expand(modified_batch_size, modified_seq_length),
-            instance_labels,
-        ]
-        retrieval_labels[:, :special_tokens_end_position] = -100
+        # retrieval_labels = input_ids[
+        #     torch.arange(modified_batch_size, device=input_ids.device)
+        #     .unsqueeze(1)
+        #     .expand(modified_batch_size, modified_seq_length),
+        #     torch.arange(modified_seq_length, device=input_ids.device)
+        #     .unsqueeze(0)
+        #     .expand(modified_batch_size, modified_seq_length),
+        #     instance_labels,
+        # ]
+        # retrieval_labels = torch.div(retrieval_labels, self.config.retrieval_loss_vocab_scale, rounding_mode='trunc')
+        # retrieval_labels = retrieval_labels.long()
+        # retrieval_labels[:, :special_tokens_end_position] = -100
 
-        pad_mask = retrieval_labels == 1
-        # wipe of 1 - (0.1  *  retrieval percentage) of pad tokens
-        pad_mask_wipe = pad_mask
-        non_pad_mask_wipe = ~pad_mask & torch.bernoulli(
-            torch.full(retrieval_labels.shape, 1 - self.config.retrieval_percentage)
-        ).bool().to(input_ids.device)
-        retrieval_labels[non_pad_mask_wipe] = -100
+        # pad_mask = retrieval_labels == 1
+        # # wipe of 1 - (0.1  *  retrieval percentage) of pad tokens
+        # pad_mask_wipe = pad_mask
+        # non_pad_mask_wipe = ~pad_mask & torch.bernoulli(
+        #     torch.full(retrieval_labels.shape, 1 - self.config.retrieval_percentage, device=input_ids.device)
+        # ).bool()
+        # retrieval_labels[non_pad_mask_wipe] = -100
 
-        retrieval_labels[pad_mask_wipe] = -100
+        # retrieval_labels[pad_mask_wipe] = -100
 
-        retrieval_predictions = self.retrieval_head(sequence_output, instance_labels)
+        # retrieval_predictions = self.retrieval_head(sequence_output, instance_labels)
 
         retrieval_loss = None
         task_loss = None
@@ -263,13 +275,14 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
         if labels is not None:
             loss_fct = CrossEntropyLoss()
             task_loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-            retrieval_loss = loss_fct(
-                retrieval_predictions.view(-1, self.config.vocab_size),
-                retrieval_labels.view(-1),
-            )
-            loss = (self.task_loss_coeff * task_loss) + (
-                self.retrieval_loss_coeff * retrieval_loss
-            )
+            # retrieval_loss = loss_fct(
+            #     retrieval_predictions.view(-1, math.ceil(self.config.vocab_size / self.config.retrieval_loss_vocab_scale)),
+            #     retrieval_labels.view(-1),
+            # )
+            # loss = (self.task_loss_coeff * task_loss) + (
+            #     self.retrieval_loss_coeff * retrieval_loss
+            # )
+            loss = task_loss
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -278,14 +291,13 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
         return SequenceClassifierOutputMuxed(
             loss=loss,
             logits=logits,
-            hidden_states=outputs.hidden_states,
+            hidden_states=demuxed_representations,
             attentions=outputs.attentions,
             task_loss=task_loss,
             retrieval_loss=retrieval_loss,
-            retrieval_predictions=torch.argmax(retrieval_predictions, dim=2).to(
-                task_loss.device
-            ),
-            retrieval_instance_labels=retrieval_labels,
+            # retrieval_predictions=torch.argmax(retrieval_predictions, dim=2)
+            # if self.config.retrieval_loss_vocab_scale == 1 else None,
+            # retrieval_instance_labels=retrieval_labels if self.config.retrieval_loss_vocab_scale == 1 else None,
         )
 
 ####### TOKEN CLASSIFICATION CLASSES
@@ -385,12 +397,12 @@ class RobertaTokenClassificationMuxed(RobertaPreTrainedModel):
 
             # prefix 5 x 5
 
-            prefix = torch.full((num_instances, num_instances), 50000).to(input_ids.device)
+            prefix = torch.full((num_instances, num_instances), 50000, device=input_ids.device)
             prefix[
-                torch.arange(num_instances).to(input_ids.device),
-                torch.arange(num_instances).to(input_ids.device),
+                torch.arange(num_instances, device=input_ids.device),
+                torch.arange(num_instances, device=input_ids.device),
             ] = (
-                -(torch.arange(num_instances).to(input_ids.device) + 2)
+                -(torch.arange(num_instances, device=input_ids.device) + 2)
                 + self.roberta.embeddings.word_embeddings.weight.shape[0]
             )
 
@@ -400,7 +412,7 @@ class RobertaTokenClassificationMuxed(RobertaPreTrainedModel):
             # [<s>, <s>, <s>, -5, <s>]
             # [<s>, <s>, <s>, <s>, -6]
             # +  size of vocab
-            cls_tokens = torch.full((num_instances, 1), 49923).to(input_ids.device)
+            cls_tokens = torch.full((num_instances, 1), 49923, device=input_ids.device)
             prefix = torch.cat([prefix, cls_tokens], dim=1)
 
             prefix = prefix.repeat(modified_batch_size, 1)
@@ -410,7 +422,7 @@ class RobertaTokenClassificationMuxed(RobertaPreTrainedModel):
             special_tokens_end_position = num_instances + 1
 
         elif self.demuxing_variant == "mlp":
-            cls_tokens = torch.full((num_instances, 1), 49923).to(input_ids.device)
+            cls_tokens = torch.full((num_instances, 1), 49923, device=input_ids.device)
             cls_tokens = cls_tokens.repeat(modified_batch_size, 1)
             # prefix = prefix.repeat(modified_batch_size, 1)
             input_ids = input_ids[: (modified_batch_size * num_instances)]
@@ -459,7 +471,6 @@ class RobertaTokenClassificationMuxed(RobertaPreTrainedModel):
             instance_embed = instance_embed.unsqueeze(1).expand(
                 num_instances, modified_seq_length, embedding_dim
             )
-            instance_embed = instance_embed.to(embedding_output.device)
             embedding_output = embedding_output * instance_embed.unsqueeze(0)
 
             embedding_output = torch.mean(embedding_output, dim=1)
@@ -479,7 +490,7 @@ class RobertaTokenClassificationMuxed(RobertaPreTrainedModel):
         ), "labels need to be supplied for multi-instance objective"
         labels = labels[: (modified_batch_size * num_instances)]
 
-        logits = self.demultiplexer(sequence_output)
+        logits, demuxed_representations = self.demultiplexer(sequence_output)
 
         # retrieval loss calculation
         instance_labels = torch.full(
@@ -489,20 +500,18 @@ class RobertaTokenClassificationMuxed(RobertaPreTrainedModel):
         ).long()
         # skip the cls and prefix tokens
         instance_labels[:, special_tokens_end_position :] = torch.randint(
-            num_instances, (modified_batch_size, modified_seq_length - special_tokens_end_position)
-        ).to(input_ids.device)
+            num_instances, (modified_batch_size, modified_seq_length - special_tokens_end_position), device=input_ids.device
+        )
 
         # index into input ids to get the corresponding labels
         input_ids = input_ids.view(modified_batch_size, num_instances, -1)
         input_ids = input_ids.permute(0, 2, 1)
 
         retrieval_labels = input_ids[
-            torch.arange(modified_batch_size)
-            .to(input_ids.device)
+            torch.arange(modified_batch_size, device=input_ids.device)
             .unsqueeze(1)
             .expand(modified_batch_size, modified_seq_length),
-            torch.arange(modified_seq_length)
-            .to(input_ids.device)
+            torch.arange(modified_seq_length, device=input_ids.device)
             .unsqueeze(0)
             .expand(modified_batch_size, modified_seq_length),
             instance_labels,
@@ -513,8 +522,8 @@ class RobertaTokenClassificationMuxed(RobertaPreTrainedModel):
         # wipe of 1 - (0.1  *  retrieval percentage) of pad tokens
         pad_mask_wipe = pad_mask
         non_pad_mask_wipe = ~pad_mask & torch.bernoulli(
-            torch.full(retrieval_labels.shape, 1 - self.config.retrieval_percentage)
-        ).bool().to(input_ids.device)
+            torch.full(retrieval_labels.shape, 1 - self.config.retrieval_percentage, device=input_ids.device)
+        ).bool()
         retrieval_labels[non_pad_mask_wipe] = -100
 
         retrieval_labels[pad_mask_wipe] = -100
@@ -551,7 +560,7 @@ class RobertaTokenClassificationMuxed(RobertaPreTrainedModel):
         return TokenClassifierOutputMuxed(
             loss=loss,
             logits=logits,
-            hidden_states=outputs.hidden_states,
+            hidden_states=demuxed_representations,
             attentions=outputs.attentions,
             task_loss=task_loss,
             retrieval_loss=retrieval_loss,
@@ -586,11 +595,11 @@ class RobertaIndexDemultiplexerSequenceClassification(nn.Module):
         x = torch.cat([positional_embeds, x], dim=1)
         x = self.dense(x)
         x = gelu(x)
-        x = self.layer_norm(x)
-        x = self.dense_before_out_proj(x)
+        demuxed_feat = self.layer_norm(x)
+        x = self.dense_before_out_proj(demuxed_feat)
         x = gelu(x)
         x = self.out_proj(x)
-        return x
+        return x, demuxed_feat
 
 class RetrievalHeadIndexDemultiplexing(nn.Module):
 
@@ -600,8 +609,8 @@ class RetrievalHeadIndexDemultiplexing(nn.Module):
         self.dense = nn.Linear(2 * config.hidden_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-        self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
-        self.bias = nn.Parameter(torch.zeros(config.vocab_size))
+        self.decoder = nn.Linear(config.hidden_size, math.ceil(config.vocab_size / config.retrieval_loss_vocab_scale))
+        self.bias = nn.Parameter(torch.zeros(math.ceil(config.vocab_size / config.retrieval_loss_vocab_scale)))
         self.decoder.bias = self.bias
 
     def forward(self, features, instance_labels, **kwargs):
@@ -612,7 +621,7 @@ class RetrievalHeadIndexDemultiplexing(nn.Module):
         instance_labels_copy = instance_labels.clone()
         instance_labels_copy[instance_labels == -100] = 0
         positional_embeds = positional_representations[
-            torch.arange(batch).unsqueeze(1).repeat(1, seqlength).to(features.device),
+            torch.arange(batch, device=features.device).unsqueeze(1).repeat(1, seqlength),
             instance_labels_copy,
         ]
         features = torch.cat([positional_embeds, features], dim=2)
@@ -663,11 +672,9 @@ class RobertaIndexDemultiplexerTokenClassification(nn.Module):
         features = features.view(-1, seqlength, 2 * feature_dim)
         x = self.dense(features)
         x = gelu(x)
-        x = self.layer_norm(x)
-
-        x = self.decoder(x)
-
-        return x
+        demuxed_feat = self.layer_norm(x)
+        x = self.decoder(demuxed_feat)
+        return x, demuxed_feat
 
     def _tie_weights(self):
         # To tie those two weights if they get disconnected (on TPU or when the bias is resized)
@@ -726,13 +733,13 @@ class RobertaMLPDemultiplexerSequenceClassification(nn.Module):
             all_feats.append(x)
 
         all_feats = torch.stack(all_feats, dim=1)
-        all_feats = all_feats.view(-1, all_feats.shape[-1])
-        x = self.dense_before_out_proj(all_feats)
+        demuxed_representations = all_feats.view(-1, all_feats.shape[-1])
+        x = self.dense_before_out_proj(demuxed_representations)
         x = gelu(x)
         x = self.layernorm_presoftmax(x)
         x = self.out_proj(x)
 
-        return x
+        return x, demuxed_representations
 
 class RetrievalHeadMLPDemultiplexing(nn.Module):
 
@@ -747,8 +754,8 @@ class RetrievalHeadMLPDemultiplexing(nn.Module):
         self.layer_norm_pre_vocab = nn.LayerNorm(
             config.hidden_size, eps=config.layer_norm_eps
         )
-        self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
-        self.bias = nn.Parameter(torch.zeros(config.vocab_size))
+        self.decoder = nn.Linear(config.hidden_size, math.ceil(config.vocab_size / config.retrieval_loss_vocab_scale))
+        self.bias = nn.Parameter(torch.zeros(math.ceil(config.vocab_size / config.retrieval_loss_vocab_scale)))
         self.decoder.bias = self.bias
 
     def forward(self, features, instance_labels, **kwargs):
@@ -820,13 +827,14 @@ class RobertaMLPDemultiplexerTokenClassification(nn.Module):
         # stack to get B x N X L X dim
         all_feats = torch.cat(all_feats, dim=1)
         # collapse the first 2 dimensions
-        all_feats = all_feats.view(-1, seq_length, feature_dim)
-        x = self.dense_before_out_proj(all_feats)
+        demuxed_representations = all_feats.view(-1, seq_length, feature_dim)
+        
+        x = self.dense_before_out_proj(demuxed_representations)
         x = gelu(x)
         x = self.layernorm_presoftmax(x)
         x = self.out_proj(x)
 
-        return x
+        return x, demuxed_representations
 
 ######  DATA CLASSES #######
 
