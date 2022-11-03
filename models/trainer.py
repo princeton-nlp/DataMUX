@@ -1754,12 +1754,13 @@ class MuxTrainer(Trainer):
                 ) = self.compute_loss(model, inputs, return_outputs=True)
                 loss = loss.mean().detach()
                 if isinstance(outputs, dict):
-                    logits = tuple(
-                        v
-                        for k, v in outputs.items()
-                        if k
-                        not in ignore_keys + ["loss", "task_loss", "retrieval_loss"]
-                    )
+                    # logits = tuple(
+                    #     v
+                    #     for k, v in outputs.items()
+                    #     if k
+                    #     not in ignore_keys + ["loss", "task_loss", "retrieval_loss"]
+                    # )
+                    logits = outputs["logits"] if "logits" in outputs else None
                 else:
                     logits = outputs[1:]
                 if "retrieval_loss" in outputs:
@@ -1778,9 +1779,10 @@ class MuxTrainer(Trainer):
                 else:
                     outputs = model(**inputs)
                 if isinstance(outputs, dict):
-                    logits = tuple(
-                        v for k, v in outputs.items() if k not in ignore_keys
-                    )
+                    # logits = tuple(
+                    #     v for k, v in outputs.items() if k not in ignore_keys
+                    # )
+                    logits = outputs["logits"] if "logits" in outputs else None
                 else:
                     logits = outputs
                 if self.args.past_index >= 0:

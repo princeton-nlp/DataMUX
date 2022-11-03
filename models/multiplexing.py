@@ -235,8 +235,6 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
                 .expand(modified_batch_size, modified_seq_length),
                 instance_labels,
             ]
-            retrieval_labels = torch.div(retrieval_labels, self.config.retrieval_loss_vocab_scale, rounding_mode='trunc')
-            retrieval_labels = retrieval_labels.long()
             retrieval_labels[:, :special_tokens_end_position] = -100
 
             pad_mask = retrieval_labels == 1
@@ -258,7 +256,7 @@ class RobertaSequenceClassificationMuxed(RobertaPreTrainedModel):
             loss_fct = CrossEntropyLoss()
             task_loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             retrieval_loss = loss_fct(
-                retrieval_predictions.view(-1, self.config.vocab_size)
+                retrieval_predictions.view(-1, self.config.vocab_size),
                 retrieval_labels.view(-1),
             )
             loss = (self.task_loss_coeff * task_loss) + (
@@ -582,8 +580,8 @@ class RetrievalHeadIndexDemultiplexing(nn.Module):
         self.dense = nn.Linear(2 * config.hidden_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-        self.decoder = nn.Linear(config.hidden_size, math.ceil(config.vocab_size / config.retrieval_loss_vocab_scale))
-        self.bias = nn.Parameter(torch.zeros(math.ceil(config.vocab_size / config.retrieval_loss_vocab_scale)))
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
+        self.bias = nn.Parameter(torch.zeros(config.vocab_size))
         self.decoder.bias = self.bias
 
     def forward(self, features, instance_labels, **kwargs):
@@ -727,8 +725,8 @@ class RetrievalHeadMLPDemultiplexing(nn.Module):
         self.layer_norm_pre_vocab = nn.LayerNorm(
             config.hidden_size, eps=config.layer_norm_eps
         )
-        self.decoder = nn.Linear(config.hidden_size, math.ceil(config.vocab_size / config.retrieval_loss_vocab_scale))
-        self.bias = nn.Parameter(torch.zeros(math.ceil(config.vocab_size / config.retrieval_loss_vocab_scale)))
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
+        self.bias = nn.Parameter(torch.zeros(config.vocab_size))
         self.decoder.bias = self.bias
 
     def forward(self, features, instance_labels, **kwargs):

@@ -277,8 +277,10 @@ CMD="python run_ner.py \
 --demuxing_variant ${DEMUXING} \
 --should_mux ${SHOULD_MUX} \
 --gaussian_hadamard_norm ${RANDOM_ENCODING_NORM} \
---learn_muxing ${LEARN_MUXING}"
-
+--learn_muxing ${LEARN_MUXING} \
+--load_best_model_at_end 1 \
+--metric_for_best_model eval_f1 \
+--save_total_limit 1"
 if [ "$DO_TRAIN" -eq 1 ]; then
         CMD="${CMD} --do_train"
 fi
