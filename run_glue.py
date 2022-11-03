@@ -263,7 +263,6 @@ def main():
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
-
     parser = HfArgumentParser(
         (ModelArguments, DataTrainingArguments, TrainingArguments)
     )
@@ -453,7 +452,7 @@ def main():
         if model_path_supplied:
             model = AutoModelForSequenceClassification.from_pretrained(model_args.model_name_or_path, config=config)
         else:
-            model = AutoModelForSequenceClassification(config=config)
+            model = AutoModelForSequenceClassification.from_config(config=config)
 
     if data_args.task_name is not None:
         sentence1_key, sentence2_key = task_to_keys[data_args.task_name]
@@ -689,16 +688,16 @@ def main():
     # Evaluation
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
-
         # Loop to handle MNLI double evaluation (matched, mis-matched)
         tasks = [data_args.task_name]
         eval_datasets = [eval_dataset]
-        if data_args.task_name == "mnli":
-            tasks.append("mnli-mm")
-            eval_datasets.append(datasets["validation_mismatched"])
+        # if data_args.task_name == "mnli":
+        #     tasks.append("mnli-mm")
+        #     eval_datasets.append(datasets["validation_mismatched"])
 
         for eval_dataset, task in zip(eval_datasets, tasks):
-            metrics = trainer.evaluate(eval_dataset=eval_dataset)
+            metrics = trainer.evaluate(eval_dataset=eval_dataset) 
+
             max_eval_samples = (
                 data_args.max_eval_samples
                 if data_args.max_eval_samples is not None
@@ -744,7 +743,7 @@ def main():
                         else:
                             item = label_list[item]
                             writer.write(f"{index}\t{item}\n")
-
+            
 
 def _mp_fn(index):
     # For xla_spawn (TPUs)
