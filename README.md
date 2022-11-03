@@ -10,13 +10,13 @@ PyTorch implementation for the paper:
 This repository contains code for reproducing results. We provide pretrained model weights and associated configs to run inference or train these models from scratch. If you find this work useful in your research, please cite:
 
 ```
-@misc{murahari2022datamux,
-      title={DataMUX: Data Multiplexing for Neural Networks}, 
-      author={Vishvak Murahari and Carlos E. Jimenez and Runzhe Yang and Karthik Narasimhan},
-      year={2022},
-      eprint={2202.09318},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
+@inproceedings{
+murahari2022datamux,
+title={Data{MUX}: Data Multiplexing for Neural Networks},
+author={Vishvak Murahari and Carlos E Jimenez and Runzhe Yang and Karthik R Narasimhan},
+booktitle={Thirty-Sixth Conference on Neural Information Processing Systems},
+year={2022},
+url={https://openreview.net/forum?id=UdgtTVTdswg}
 }
 ```
 
@@ -48,7 +48,7 @@ conda env create -f env.yaml
 ### Usage
 
 #### Overview
-For sentence-level classification tasks, refer to `run_glue.py` and `run_glue.sh`. For token-level classification tasks, refer to `run_glue.py` and `run_glue.sh`.
+For sentence-level classification tasks, refer to `run_glue.py` and `run_glue.sh`. For token-level classification tasks, refer to `run_ner.py` and `run_ner.sh`.
 #### Pre-trained checkpoints
 We release all the pretrained checkpoints on the Hugging Face [model hub](https://huggingface.co/princeton-nlp). We list the checkpoints below. For number of instances, use 2, 5, 10, 20 or 40.
 
@@ -143,13 +143,13 @@ For reproducing results on the vision tasks for MLPs and CNNs, please use this [
 
 ### Reference
 ```
-@misc{murahari2022datamux,
-      title={DataMUX: Data Multiplexing for Neural Networks}, 
-      author={Vishvak Murahari and Carlos E. Jimenez and Runzhe Yang and Karthik Narasimhan},
-      year={2022},
-      eprint={2202.09318},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
+@inproceedings{
+murahari2022datamux,
+title={Data{MUX}: Data Multiplexing for Neural Networks},
+author={Vishvak Murahari and Carlos E Jimenez and Runzhe Yang and Karthik R Narasimhan},
+booktitle={Thirty-Sixth Conference on Neural Information Processing Systems},
+year={2022},
+url={https://openreview.net/forum?id=UdgtTVTdswg}
 }
 ```
 ### License
