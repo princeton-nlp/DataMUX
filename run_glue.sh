@@ -15,6 +15,7 @@ LEARN_MUXING=0
 CONTINUE_TRAIN=0
 DO_TRAIN=0
 DO_EVAL=0
+GRADIENT_ACCUMULATION=1
 # commmand line arguments
 #!/bin/bash
 
@@ -119,7 +120,16 @@ while :; do
                 die 'ERROR: "--task" requires a non-empty option argument.'
             fi
         ;;
-        
+
+        --gradient_accumulation)
+            if [ "$2" ]; then
+                GRADIENT_ACCUMULATION=$2
+                shift
+            else
+                die 'ERROR: "--gradient_accumulation" requires a non-empty option argument.'
+            fi
+        ;;
+
         --model_path)
             if [ "$2" ]; then
                 MODEL_PATH=$2
@@ -228,8 +238,8 @@ if [[ $LEARN_MUXING -ge 1 ]]; then
     OUTPUT_DIR=$OUTPUT_DIR_BASE/${TASK_NAME}_${MODEL_PATH}_${MUXING}_${DEMUXING}_${NUM_INSTANCES}_norm_${RANDOM_ENCODING_NORM}_rc_${RETRIEVAL_LOSS_COEFF}_lr${LEARNING_RATE}_tc_${TASK_LOSS_COEFF}_${CONFIG_NAME}_learntmuxing
     RUN_NAME=${TASK_NAME}_${MODEL_PATH}_${MUXING}_${DEMUXING}_${NUM_INSTANCES}_${RETRIEVAL_PERCENTAGE}_norm_${RANDOM_ENCODING_NORM}_rc_${RETRIEVAL_LOSS_COEFF}_lr${LEARNING_RATE}_tc_${TASK_LOSS_COEFF}_${CONFIG_NAME}_learnmuxing
 else
-    OUTPUT_DIR=$OUTPUT_DIR_BASE/${TASK_NAME}_${MODEL_PATH}_${MUXING}_${DEMUXING}_${NUM_INSTANCES}_norm_${RANDOM_ENCODING_NORM}_rc_${RETRIEVAL_LOSS_COEFF}_lr${LEARNING_RATE}_tc_${TASK_LOSS_COEFF}_${CONFIG_NAME}
-    RUN_NAME=${TASK_NAME}_${MODEL_PATH}_${MUXING}_${DEMUXING}_${NUM_INSTANCES}_${RETRIEVAL_PERCENTAGE}_norm_${RANDOM_ENCODING_NORM}_rc_${RETRIEVAL_LOSS_COEFF}_lr${LEARNING_RATE}_tc_${TASK_LOSS_COEFF}_${CONFIG_NAME}
+    OUTPUT_DIR=$OUTPUT_DIR_BASE/${TASK_NAME}_${MODEL_PATH}_${MUXING}_${DEMUXING}_${NUM_INSTANCES}_norm_${RANDOM_ENCODING_NORM}_rc_${RETRIEVAL_LOSS_COEFF}_lr${LEARNING_RATE}_tc_${TASK_LOSS_COEFF}_${CONFIG_NAME}_${GRADIENT_ACCUMULATION}_${RETRIEVAL_LOSS_VOCAB_SCALE}
+    RUN_NAME=${TASK_NAME}_${MODEL_PATH}_${MUXING}_${DEMUXING}_${NUM_INSTANCES}_${RETRIEVAL_PERCENTAGE}_norm_${RANDOM_ENCODING_NORM}_rc_${RETRIEVAL_LOSS_COEFF}_lr${LEARNING_RATE}_tc_${TASK_LOSS_COEFF}_${CONFIG_NAME}_${GRADIENT_ACCUMULATION}_${RETRIEVAL_LOSS_VOCAB_SCALE}
 fi
 
 if [ -z "$BATCH_SIZE" ]  # if BATCH_SIZE is not set manually
@@ -273,7 +283,11 @@ CMD="python run_glue.py \
 --demuxing_variant ${DEMUXING} \
 --should_mux ${SHOULD_MUX} \
 --gaussian_hadamard_norm ${RANDOM_ENCODING_NORM} \
---learn_muxing ${LEARN_MUXING}"
+--learn_muxing ${LEARN_MUXING} \
+--gradient_accumulation_steps ${GRADIENT_ACCUMULATION} \
+--load_best_model_at_end 1 \
+--metric_for_best_model eval_accuracy \
+--save_total_limit 1"
 
 if [ "$DO_TRAIN" -eq 1 ]; then
     CMD="${CMD} --do_train"
@@ -303,7 +317,7 @@ echo "Running command with arguments:"
 echo $CMD
 
 if [[ $USE_SLURM = 1 ]]; then
-    sbatch --time=$TIME --mem=32G --output=logs/%x-%j.out --job-name=${TASK_NAME}_${NUM_INSTANCES}_${MUXING}_${DEMUXING} --gres=gpu:1 ./run_job.sh \
+    sbatch --time=$TIME --mem=32G --output=logs/%x-%j.out --job-name=${TASK_NAME}_${NUM_INSTANCES}_${MUXING}_${DEMUXING} --gres=gpu:1 -A pnlp ./run_job.sh \
     "$CMD"
 else
     ./run_job.sh "$CMD"
