@@ -23,7 +23,7 @@ from typing import (
     Union,
 )
 from torch import optim
-
+import nvidia_smi
 
 # Integrations must be imported before ML frameworks:
 from transformers.integrations import (  # isort: split
@@ -39,6 +39,7 @@ from transformers.integrations import (  # isort: split
 )
 
 import numpy as np
+import pandas as pd
 import torch
 from packaging import version
 from torch import nn
@@ -114,6 +115,10 @@ from transformers.utils.modeling_auto_mapping import (
 from transformers import Trainer
 from transformers.integrations import WandbCallback, rewrite_logs
 import wandb
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 _is_native_amp_available = False
 
@@ -1165,7 +1170,8 @@ class MuxTrainer(Trainer):
         eval_dataset: Optional[Dataset] = None,
         ignore_keys: Optional[List[str]] = None,
         metric_key_prefix: str = "eval",
-        speed_metrics=False
+        speed_metrics=False,
+        interference_report=False
     ) -> Dict[str, float]:
         """
         Run evaluation and returns metrics.
@@ -1193,7 +1199,7 @@ class MuxTrainer(Trainer):
         """
         # memory metrics - must set up as early as possible
         self._memory_tracker.start()
-
+        nvidia_smi.nvmlInit()        
         if eval_dataset is not None and not isinstance(
             eval_dataset, collections.abc.Sized
         ):
@@ -1225,14 +1231,18 @@ class MuxTrainer(Trainer):
             self.args, self.state, self.control, output.metrics
         )
         if speed_metrics:
+            
             train_dataloader =  self.get_train_dataloader()
             model = self._wrap_model(self.model, training=False)
             model.eval()
             tot_samples = 0 
             total_infer_time = 0
+            average_gpu_memory = 0
+            batch_ctr = 0
+            
             with torch.no_grad():
-
                 for _, inputs in enumerate(tqdm(train_dataloader)):
+
                     inputs = self._prepare_inputs(inputs)
                     start_time = time.time()
                     _ = model(**inputs)
@@ -1240,13 +1250,82 @@ class MuxTrainer(Trainer):
                     end_time = time.time()
                     total_infer_time += (end_time - start_time)
                     tot_samples += inputs['input_ids'].shape[0]
-                    
+                    batch_ctr += 1
+                    # gpu memory calculations
+                    handle = nvidia_smi.nvmlDeviceGetHandleByIndex(0)
+                    info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
+                    average_gpu_memory += info.used / 1e+9
+                    # if batch_ctr > 20:
+                    #     break
                 throughput = tot_samples / total_infer_time
+                average_gpu_memory = average_gpu_memory / batch_ctr
                 # update metrics
                 output.metrics[f"{metric_key_prefix}_throughput"] = throughput
                 output.metrics[f"{metric_key_prefix}_speed_tot_samples"] = tot_samples
                 output.metrics[f"{metric_key_prefix}_inference_time"] = total_infer_time
+                output.metrics[f"{metric_key_prefix}_average_memory"] = average_gpu_memory
 
+        if interference_report:
+            num_anchors = 10
+            num_batches = 30
+            train_dataloader =  self.get_train_dataloader()
+            model = self._wrap_model(self.model, training=False)
+            model.eval()
+            anchors = None
+            anchor_representations = {i: [] for i in range(num_anchors)}
+            with torch.no_grad():
+                for batch_id, inputs in enumerate(tqdm(train_dataloader)):
+                    if batch_id > num_batches:
+                        break
+                    inputs = self._prepare_inputs(inputs)
+                    if anchors is None:
+                        anchors = inputs["input_ids"][:num_anchors]
+                        continue
+                    # replace with anchor and get corresponding demux representations
+                    for anchor_id in range(num_anchors):
+                        anchor = anchors[anchor_id]
+                        inputs["input_ids"][0] = anchor
+                        inputs["return_dict"] = True
+                        outputs = model(**inputs)
+                        anchor_representations[anchor_id].append(outputs["hidden_states"][0])
+            # t-sne plot
+            anchor_representations_stacked = []
+            for anchor_id in range(num_anchors):
+               anchor_representations_stacked.append(torch.stack(anchor_representations[anchor_id]))
+            anchor_representations_stacked = torch.cat(anchor_representations_stacked)
+            anchor_representations_stacked = anchor_representations_stacked.cpu().numpy() 
+            average_cos_similarity = 0 
+            for anchor_i in range(num_anchors):
+                for anchor_j in range(anchor_i +1, num_anchors):
+                    anchor_i_representations = torch.stack(anchor_representations[anchor_i])
+                    anchor_j_representations = torch.stack(anchor_representations[anchor_j])
+                    average_cos_similarity += (torch.matmul(anchor_i_representations, anchor_j_representations.t()) / (torch.norm(anchor_i_representations, dim=1) * torch.norm(anchor_j_representations, dim=1))).mean()
+            average_cos_similarity /= (num_anchors * (num_anchors - 1) * 0.5)
+            pca_50 = PCA(n_components=200)
+            pca_result_50 = pca_50.fit_transform(anchor_representations_stacked)
+            tsne = TSNE(n_components=2, verbose=1, n_iter=500)
+            tsne_pca_results = tsne.fit_transform(pca_result_50)
+            df = pd.DataFrame()
+            df["tsne_1"] = tsne_pca_results[:, 0]
+            df["tsne_2"] = tsne_pca_results[:, 1]
+            df["sample"] = np.repeat(np.arange(num_anchors), len(anchor_representations[0]))
+            df["sample"] = df["sample"].apply(lambda i: str(i))
+            sns.scatterplot(
+            x="tsne_1", y="tsne_2",
+            hue='sample',
+            palette=sns.color_palette("bright", num_anchors),
+            data=df,
+            legend="full",
+            alpha=0.3,
+            )
+            plt.xlabel('x', fontsize=12)
+            plt.ylabel('y', fontsize=12)
+            plt.title(f'Interference analysis: N = {self.model.config.num_instances}', fontsize=16)
+            plt.legend(loc="lower right", fontsize=8)
+            plt.savefig(f"interference_fig_{self.model.config.num_instances}.png")
+            df.to_csv(f"interference_fig_{self.model.config.num_instances}.csv")
+            print(f"average cos similarity: {average_cos_similarity}")
+        
         self._memory_tracker.stop_and_update_metrics(output.metrics)
 
         return output.metrics
