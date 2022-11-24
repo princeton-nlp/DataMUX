@@ -1242,8 +1242,8 @@ class MuxTrainer(Trainer):
             
             with torch.no_grad():
                 for _, inputs in enumerate(tqdm(train_dataloader)):
-
                     inputs = self._prepare_inputs(inputs)
+                    inputs.pop('labels')
                     start_time = time.time()
                     _ = model(**inputs)
                     torch.cuda.synchronize()
@@ -1255,8 +1255,8 @@ class MuxTrainer(Trainer):
                     handle = nvidia_smi.nvmlDeviceGetHandleByIndex(0)
                     info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
                     average_gpu_memory += info.used / 1e+9
-                    # if batch_ctr > 20:
-                    #     break
+                    if batch_ctr > 50:
+                        break
                 throughput = tot_samples / total_infer_time
                 average_gpu_memory = average_gpu_memory / batch_ctr
                 # update metrics

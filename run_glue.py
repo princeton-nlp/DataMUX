@@ -696,7 +696,7 @@ def main():
         #     eval_datasets.append(datasets["validation_mismatched"])
 
         for eval_dataset, task in zip(eval_datasets, tasks):
-            metrics = trainer.evaluate(eval_dataset=eval_dataset)
+            metrics = trainer.evaluate(eval_dataset=eval_dataset, speed_metrics=True)
 
             max_eval_samples = (
                 data_args.max_eval_samples

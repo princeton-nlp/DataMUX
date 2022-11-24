@@ -287,7 +287,8 @@ CMD="python run_glue.py \
 --gradient_accumulation_steps ${GRADIENT_ACCUMULATION} \
 --load_best_model_at_end 1 \
 --metric_for_best_model eval_accuracy \
---save_total_limit 1"
+--save_total_limit 1 \
+--dataloader_num_workers 8"
 
 if [ "$DO_TRAIN" -eq 1 ]; then
     CMD="${CMD} --do_train"
@@ -315,9 +316,9 @@ fi
 
 echo "Running command with arguments:"
 echo $CMD
-
+echo $USE_SLURM
 if [[ $USE_SLURM = 1 ]]; then
-    sbatch --time=$TIME --mem=32G --output=logs/%x-%j.out --job-name=${TASK_NAME}_${NUM_INSTANCES}_${MUXING}_${DEMUXING} --gres=gpu:1 -A pnlp ./run_job.sh \
+    sbatch --time=$TIME --mem=32G --output=logs/%x-%j.out --job-name=${TASK_NAME}_${NUM_INSTANCES}_${MUXING}_${DEMUXING} --gres=gpu:rtx_3090:1 -A pnlp ./run_job.sh \
     "$CMD"
 else
     ./run_job.sh "$CMD"
